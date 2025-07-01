@@ -2,7 +2,7 @@
 
 自己突发奇想做的奇奇怪怪的小项目）
 
-智能排课(可以排课 并警告冲突课程)
+智能排课(可以排课 并警告冲突课程)  IntelliJ IDEA
 还做不到导入文件TT
 使用方法：下载xmapp (https://www.apachefriends.org/zh_cn/index.html)
 在XAMPP控制面板上，点击 MySQL 那一行的 “Admin” 按钮。
