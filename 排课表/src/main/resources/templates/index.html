@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!-- 引入公共头部 -->
+    <th:block th:include="fragments :: header"></th:block>
+</head>
+<body>
+
+<div class="container-fluid mt-4">
+
+    <!-- 标题和周次切换 -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">我的课程表</h1>
+        <div class="d-flex align-items-center">
+            <a th:href="@{'/?week=' + ${currentWeek - 1}}" class="btn btn-outline-primary"><i class="bi bi-arrow-left"></i> 上一周</a>
+            <h4 class="mx-3 mb-0" th:text="'第 ' + ${currentWeek} + ' 周'"></h4>
+            <a th:href="@{'/?week=' + ${currentWeek + 1}}" class="btn btn-outline-primary">下一周 <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addCourseModal">
+                <i class="bi bi-plus-circle"></i> 添加新课程
+            </button>
+            <button type="button" class="btn btn-info" disabled>
+                <i class="bi bi-upload"></i> 导入课程 (开发中)
+            </button>
+        </div>
+    </div>
+
+    <!-- 成功/失败消息提示 -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${successMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${errorMessage}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- 可视化课表 -->
+    <table class="timetable">
+        <thead>
+        <tr>
+            <th>时间</th>
+            <th>星期一</th>
+            <th>星期二</th>
+            <th>星期三</th>
+            <th>星期四</th>
+            <th>星期五</th>
+            <th>星期六</th>
+            <th>星期日</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- 使用Thymeleaf循环生成12节课的时间行 -->
+        <tr th:each="section : ${#numbers.sequence(1, 12)}">
+            <td th:text="'第' + ${section} + '节'"></td>
+            <!-- 循环生成周一到周日的单元格 -->
+            <td th:each="day : ${#numbers.sequence(1, 7)}">
+                <!-- 在每个单元格内, 再次循环检查是否有课程安排在这里 -->
+                <div th:each="course : ${weeklyCourses[__${day}__][__${section}__]}" class="course-block">
+                    <div class="course-name" th:text="${course.courseName}"></div>
+                    <div class="course-location" th:text="${course.location}"></div>
+                    <div class="course-location" th:text="${course.teacherName}"></div>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+</div>
+
+<!-- 添加课程的模态框 (Modal) -->
+<div class="modal fade" id="addCourseModal" tabindex="-1" aria-labelledby="addCourseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCourseModalLabel">添加新课程</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 课程信息输入表单 -->
+                <form id="courseForm" th:action="@{/courses/add}" method="post">
+                    <!-- 基本信息 -->
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label for="courseName" class="form-label">课程名称</label>
+                            <input type="text" class="form-control" id="courseName" name="courseName" required>
+                        </div>
+                        <div class="col">
+                            <label for="teacherName" class="form-label">教师姓名</label>
+                            <input type="text" class="form-control" id="teacherName" name="teacherName">
+                        </div>
+                        <div class="col">
+                            <label for="location" class="form-label">上课地点</label>
+                            <input type="text" class="form-control" id="location" name="location" required>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5>上课时间安排</h5>
+                    <!-- 动态添加时间安排的容器 -->
+                    <div id="scheduleContainer">
+                        <!-- 第一个时间安排 (默认存在) -->
+                        <div class="row g-3 align-items-center mb-2 schedule-item">
+                            <div class="col-auto"><label class="form-label">第</label></div>
+                            <div class="col"><input type="number" class="form-control" name="schedules[0].startWeek" placeholder="开始周" required></div>
+                            <div class="col-auto"><label class="form-label">到</label></div>
+                            <div class="col"><input type="number" class="form-control" name="schedules[0].endWeek" placeholder="结束周" required></div>
+                            <div class="col-auto"><label class="form-label">周</label></div>
+                            <div class="col">
+                                <select class="form-select" name="schedules[0].dayOfWeek" required>
+                                    <option value="1">一</option><option value="2">二</option><option value="3">三</option>
+                                    <option value="4">四</option><option value="5">五</option><option value="6">六</option>
+                                    <option value="7">日</option>
+                                </select>
+                            </div>
+                            <div class="col-auto"><label class="form-label">时间</label></div>
+                            <div class="col"><input type="time" class="form-control" name="schedules[0].startTime" required></div>
+                            <div class="col-auto"><label class="form-label">-</label></div>
+                            <div class="col"><input type="time" class="form-control" name="schedules[0].endTime" required></div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-danger btn-sm" onclick="removeSchedule(this)" disabled>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 添加/删除时间安排的按钮 -->
+                    <button type="button" class="btn btn-outline-primary mt-2" onclick="addSchedule()">
+                        <i class="bi bi-plus"></i> 添加另一个时间段
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="submit" class="btn btn-primary" form="courseForm">保存课程</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 引入公共页脚 -->
+<div th:replace="fragments :: footer"></div>
+
+<!-- JavaScript 脚本 -->
+<script>
+    let scheduleIndex = 1; // 全局变量, 用于追踪时间安排的数量
+
+    // 动态添加一个新的时间安排输入行
+    function addSchedule() {
+        const container = document.getElementById('scheduleContainer');
+        const newItem = document.createElement('div');
+        newItem.className = 'row g-3 align-items-center mb-2 schedule-item';
+        // 使用模板字符串构建新的HTML内容
+        newItem.innerHTML = `
+            <div class="col-auto"><label class="form-label">第</label></div>
+            <div class="col"><input type="number" class="form-control" name="schedules[${scheduleIndex}].startWeek" placeholder="开始周" required></div>
+            <div class="col-auto"><label class="form-label">到</label></div>
+            <div class="col"><input type="number" class="form-control" name="schedules[${scheduleIndex}].endWeek" placeholder="结束周" required></div>
+            <div class="col-auto"><label class="form-label">周</label></div>
+            <div class="col">
+                <select class="form-select" name="schedules[${scheduleIndex}].dayOfWeek" required>
+                    <option value="1">一</option><option value="2">二</option><option value="3">三</option>
+                    <option value="4">四</option><option value="5">五</option><option value="6">六</option>
+                    <option value="7">日</option>
+                </select>
+            </div>
+            <div class="col-auto"><label class="form-label">时间</label></div>
+            <div class="col"><input type="time" class="form-control" name="schedules[${scheduleIndex}].startTime" required></div>
+            <div class="col-auto"><label class="form-label">-</label></div>
+            <div class="col"><input type="time" class="form-control" name="schedules[${scheduleIndex}].endTime" required></div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeSchedule(this)">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(newItem);
+        scheduleIndex++; // 索引加一, 为下一次添加做准备
+        updateRemoveButtons();
+    }
+
+    // 移除一个时间安排输入行
+    function removeSchedule(button) {
+        // 获取按钮所在的父级元素 (.schedule-item) 并移除它
+        button.closest('.schedule-item').remove();
+        updateRemoveButtons();
+    }
+
+    // 更新删除按钮的状态
+    // 如果只剩一个时间安排, 则禁用其删除按钮
+    function updateRemoveButtons() {
+        const items = document.querySelectorAll('.schedule-item');
+        items.forEach((item, index) => {
+            const button = item.querySelector('.btn-danger');
+            if (button) {
+                button.disabled = (items.length === 1);
+            }
+        });
+    }
+
+    // 页面加载时初始化删除按钮状态
+    document.addEventListener('DOMContentLoaded', function() {
+        updateRemoveButtons();
+    });
+</script>
+
+</body>
+</html>
